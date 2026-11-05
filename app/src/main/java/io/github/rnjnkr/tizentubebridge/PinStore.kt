@@ -1,4 +1,4 @@
-package com.example.youtubetvinterceptor
+package io.github.rnjnkr.tizentubebridge
 
 import android.content.Context
 import android.net.Uri

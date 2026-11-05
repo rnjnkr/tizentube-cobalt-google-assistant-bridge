@@ -1,4 +1,4 @@
-package com.example.youtubetvinterceptor
+package io.github.rnjnkr.tizentubebridge
 
 import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
@@ -39,9 +39,9 @@ import java.util.regex.Pattern
  * It must stay enabled: when disabled, the Assistant sends you to the Play Store instead.
  *
  * Requires these granted via adb (they cannot be granted through the UI):
- *   adb shell pm grant com.example.youtubetvinterceptor android.permission.READ_LOGS
- *   adb shell pm grant com.example.youtubetvinterceptor android.permission.DUMP
- *   adb shell pm grant com.example.youtubetvinterceptor android.permission.PACKAGE_USAGE_STATS
+ *   adb shell pm grant io.github.rnjnkr.tizentubebridge android.permission.READ_LOGS
+ *   adb shell pm grant io.github.rnjnkr.tizentubebridge android.permission.DUMP
+ *   adb shell pm grant io.github.rnjnkr.tizentubebridge android.permission.PACKAGE_USAGE_STATS
  * and the service enabled under Settings > Accessibility.
  */
 class YouTubeInterceptorService : AccessibilityService() {

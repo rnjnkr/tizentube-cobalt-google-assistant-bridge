@@ -14,7 +14,7 @@ developed on a Sony BRAVIA (platform BRAVIA BF1, MediaTek MT9687) on Android 12 
 The Gradle project is in this folder — service code, manifest with READ_LOGS/DUMP/
 PACKAGE_USAGE_STATS, accessibility config, and a Gradle 8.7 wrapper (AGP 8.6.1,
 Kotlin 1.9.24, compileSdk/targetSdk 34). applicationId is
-com.example.youtubetvinterceptor. Create local.properties with `sdk.dir=<path to SDK>`.
+io.github.rnjnkr.tizentubebridge. Create local.properties with `sdk.dir=<path to SDK>`.
 
 Never uninstall a system app on the TV — disable it (pm disable-user) instead.
 
@@ -25,6 +25,8 @@ Please, running locally:
    releases bundle Java 25, which fails with just "25.0.3"; point Gradle at a JDK 17–21:
    -Dorg.gradle.java.home=<path to JDK 21>).
    The SDK needs platforms;android-34 and build-tools;34.0.0.
+2.-4. `./setup-tv.sh <TV_IP>` does steps 2-4 (plus the notification-listener and audio-focus
+   steps below) and checks the result. By hand:
 2. adb connect to the TV, install -r the debug APK.
 3. Grant READ_LOGS, DUMP and PACKAGE_USAGE_STATS via pm grant. All three are needed:
    without PACKAGE_USAGE_STATS, dumpsys activity is refused ("Permission Denial") and
@@ -42,12 +44,12 @@ Please, running locally:
 - SDK packages: platforms;android-34 and build-tools;34.0.0.
 - TizenTube Cobalt already sideloaded on the TV (the redirect targets its component).
 
-## Manual command reference (if you'd rather run it by hand)
+## Manual command reference (what setup-tv.sh runs, if you'd rather do it by hand)
     ./gradlew assembleDebug
     ADB=adb                      # or the full path to platform-tools/adb
     $ADB connect <TV_IP>:5555
     $ADB install -r app/build/outputs/apk/debug/app-debug.apk
-    PKG=com.example.youtubetvinterceptor
+    PKG=io.github.rnjnkr.tizentubebridge
     $ADB shell pm grant $PKG android.permission.READ_LOGS
     $ADB shell pm grant $PKG android.permission.DUMP
     $ADB shell pm grant $PKG android.permission.PACKAGE_USAGE_STATS
@@ -99,7 +101,7 @@ The TV's logcat `main` buffer only holds ~15 minutes (the display driver's `PqLi
 floods it), so `adb logcat -s YTInterceptor` often shows nothing for past commands. The
 service also writes every event to a rolling file in its private storage:
 
-    $ADB shell run-as com.example.youtubetvinterceptor cat files/events.log
+    $ADB shell run-as io.github.rnjnkr.tizentubebridge cat files/events.log
 
 Lines are `epoch-ms <TAB> date time <TAB> level <TAB> message`. Entries older than 24 h are
 dropped on each write, capped at 1000 lines / 500 chars per message (< ~0.5 MB). A
@@ -115,7 +117,7 @@ youtube.com / youtu.be.
 
 The master copy is `pins.txt` in this folder, or `pins.local.txt` (git-ignored, preferred by
 the script when present) for pins you don't want to commit. Edit it, then run `./push-pins.sh <TV_IP>`
-(or set `TV_IP` / `ADB` in the environment), which copies it to `/sdcard/Android/data/com.example.youtubetvinterceptor/files/pins.txt`. No rebuild
+(or set `TV_IP` / `ADB` in the environment), which copies it to `/sdcard/Android/data/io.github.rnjnkr.tizentubebridge/files/pins.txt`. No rebuild
 needed: the service re-reads the file when its timestamp or size changes (checked on each
 command) and logs `Loaded N pin(s)`, plus an `ignored` line for any malformed entry. If the
 file is missing on the TV, the service recreates it from `PinStore.kt` (commented examples, no
@@ -168,3 +170,8 @@ active pins).
   launch that did carry a link (recognised by com.google.android.katniss's uid
   in the START line) whose URL can't be read opens TizenTube's home screen rather than
   leaving official YouTube up.
+- **Package renamed** from `com.example.youtubetvinterceptor` to
+  `io.github.rnjnkr.tizentubebridge`. Android treats it as a different app: remove the old
+  one (`adb uninstall com.example.youtubetvinterceptor`) or both will redirect, and push
+  pins.txt again (its path on the TV includes the package name). setup-tv.sh warns if the
+  old package is still installed.

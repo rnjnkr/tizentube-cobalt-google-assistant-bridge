@@ -1,4 +1,4 @@
-package com.example.youtubetvinterceptor
+package io.github.rnjnkr.tizentubebridge
 
 import android.content.Context
 import android.util.Log
@@ -11,7 +11,7 @@ import java.util.Locale
  * Rolling event log in the app's private storage. The TV's logcat `main` buffer is flooded by
  * the display driver (PqLink) and only holds ~15 minutes, so service events are also kept here.
  * Read it with:
- *   adb shell run-as com.example.youtubetvinterceptor cat files/events.log
+ *   adb shell run-as io.github.rnjnkr.tizentubebridge cat files/events.log
  *
  * Each line starts with the epoch-millis time it was written. On every write, lines older than
  * [MAX_AGE_MS] are dropped and at most [MAX_LINES] are kept, so a burst of events (or a clock

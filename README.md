@@ -54,28 +54,22 @@ work, but the log formats it relies on aren't guaranteed to be identical everywh
 
 ```sh
 ./gradlew assembleDebug
-adb connect <TV_IP>:5555
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-
-PKG=com.example.youtubetvinterceptor
-adb shell pm grant $PKG android.permission.READ_LOGS
-adb shell pm grant $PKG android.permission.DUMP
-adb shell pm grant $PKG android.permission.PACKAGE_USAGE_STATS
-
-# Enable the accessibility service (appends to any already enabled)
-COMP=$PKG/$PKG.YouTubeInterceptorService
-CUR=$(adb shell settings get secure enabled_accessibility_services | tr -d '\r'); [ "$CUR" = "null" ] && CUR=""
-case "$CUR" in *"$COMP"*) ;; *) adb shell settings put secure enabled_accessibility_services "${CUR:+$CUR:}$COMP";; esac
-adb shell settings put secure accessibility_enabled 1
-
-# Media-session access, used only to stop official YouTube's playback after a redirect
-adb shell cmd notification allow_listener $PKG/$PKG.MediaListenerService
-
-# Optional but recommended: stop official YouTube from pausing TizenTube via audio focus.
-# Undo with: ... TAKE_AUDIO_FOCUS allow
-adb shell appops set com.google.android.youtube.tv TAKE_AUDIO_FOCUS ignore
+./setup-tv.sh <TV_IP>
 ```
 
+The app can't ask for its permissions itself: Android only lets adb grant them, so
+[`setup-tv.sh`](setup-tv.sh) does it in one go. It installs the APK, then:
+
+- grants `READ_LOGS`, `DUMP` and `PACKAGE_USAGE_STATS` (reading YouTube's launch link);
+- enables the accessibility service, appending to any already enabled;
+- allows media-session access, used only to stop official YouTube's playback after a redirect;
+- denies official YouTube the `TAKE_AUDIO_FOCUS` app-op so it can't pause TizenTube (skip with
+  `SKIP_AUDIO_FOCUS=1`; undo with `adb shell appops set com.google.android.youtube.tv
+  TAKE_AUDIO_FOCUS allow`);
+- finally checks that the grants took and the service is running.
+
+It's safe to re-run after every rebuild. Set `ADB=/path/to/adb` if adb isn't on your PATH; the
+individual commands are listed in [KICKOFF.md](KICKOFF.md) if you'd rather run them by hand.
 Grants and settings survive reboots and `install -r` updates. Then say *"Hey Google, play
 lofi music on YouTube"*.
 
@@ -95,7 +89,7 @@ script pushes that file when it exists.
 ## Logs
 
 ```sh
-adb shell run-as com.example.youtubetvinterceptor cat files/events.log
+adb shell run-as io.github.rnjnkr.tizentubebridge cat files/events.log
 ```
 
 ## Known limitations

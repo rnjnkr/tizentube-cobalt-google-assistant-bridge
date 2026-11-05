@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.youtubetvinterceptor"
+    namespace = "io.github.rnjnkr.tizentubebridge"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.youtubetvinterceptor"
+        applicationId = "io.github.rnjnkr.tizentubebridge"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
