@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- READ_LOGS + DUMP are signature/privileged: grant via adb pm grant (see README). -->
+    <uses-permission android:name="android.permission.READ_LOGS" />
+    <uses-permission android:name="android.permission.DUMP" />
+    <!-- dumpsys activity also requires usage-stats access; the appop alone is not enough:
+         adb shell pm grant <pkg> android.permission.PACKAGE_USAGE_STATS -->
+
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+
+    <!-- Package visibility (Android 11+) so we can resolve/launch these components. -->
+    <queries>
+        <package android:name="io.gh.reisxd.tizentube.cobalt" />
+        <package android:name="com.google.android.youtube.tv" />
+        <!-- Google Assistant, to recognise its launches by uid. -->
+        <package android:name="com.google.android.katniss" />
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:label="@string/app_name">
+
+        <service
+            android:name=".YouTubeInterceptorService"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- Empty listener; only grants media-session control. Enable via adb:
+             cmd notification allow_listener <pkg>/<pkg>.MediaListenerService -->
+        <service
+            android:name=".MediaListenerService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
