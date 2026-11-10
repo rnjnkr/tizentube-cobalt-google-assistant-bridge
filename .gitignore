@@ -13,3 +13,8 @@
 CLAUDE.md
 app/geminiresponse
 pins.local.txt
+
+# Release signing (holds the keystore password)
+keystore.properties
+*.jks
+*.keystore

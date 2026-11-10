@@ -8,10 +8,11 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Rolling event log in the app's private storage. The TV's logcat `main` buffer is flooded by
- * the display driver (PqLink) and only holds ~15 minutes, so service events are also kept here.
- * Read it with:
- *   adb shell run-as io.github.rnjnkr.tizentubebridge cat files/events.log
+ * Rolling event log next to pins.txt in the app's external files dir. The TV's logcat `main`
+ * buffer is flooded by the display driver (PqLink) and only holds ~15 minutes, so service events
+ * are also kept here. Unlike private storage (which needs `run-as`, debug builds only), adb can
+ * read it on any build:
+ *   adb shell cat /sdcard/Android/data/io.github.rnjnkr.tizentubebridge/files/events.log
  *
  * Each line starts with the epoch-millis time it was written. On every write, lines older than
  * [MAX_AGE_MS] are dropped and at most [MAX_LINES] are kept, so a burst of events (or a clock
@@ -30,7 +31,8 @@ object EventLog {
     private val lock = Any()
 
     fun init(context: Context) {
-        file = File(context.filesDir, FILE_NAME)
+        // Falls back to private storage if shared storage isn't available.
+        file = File(context.getExternalFilesDir(null) ?: context.filesDir, FILE_NAME)
     }
 
     fun i(msg: String) {

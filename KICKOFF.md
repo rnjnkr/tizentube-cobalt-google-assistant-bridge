@@ -99,14 +99,17 @@ Netflix suspend themselves when they leave the screen, so they're unaffected.
 ## Event log (redirect history)
 The TV's logcat `main` buffer only holds ~15 minutes (the display driver's `PqLink` tag
 floods it), so `adb logcat -s YTInterceptor` often shows nothing for past commands. The
-service also writes every event to a rolling file in its private storage:
+service also writes every event to a rolling file next to pins.txt (the app's external files
+dir; it used to be private storage, which `run-as` can only read on debug builds):
 
-    $ADB shell run-as io.github.rnjnkr.tizentubebridge cat files/events.log
+    $ADB shell cat /sdcard/Android/data/io.github.rnjnkr.tizentubebridge/files/events.log
 
 Lines are `epoch-ms <TAB> date time <TAB> level <TAB> message`. Entries older than 24 h are
 dropped on each write, capped at 1000 lines / 500 chars per message (< ~0.5 MB). A
 reinstall shows a new "Service connected" line with no matching "destroyed" line; that's
-expected (the process is killed without onDestroy).
+expected (the process is killed without onDestroy). On Android 11+ other apps can't read this
+folder; on Android 10 and older, apps with storage permission could (it holds voice queries
+and video links).
 
 ## Pinned voice queries
 `pins.txt` maps what the Assistant heard (the URL's `vq` parameter) to a fixed URL, because

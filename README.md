@@ -73,6 +73,30 @@ individual commands are listed in [KICKOFF.md](KICKOFF.md) if you'd rather run t
 Grants and settings survive reboots and `install -r` updates. Then say *"Hey Google, play
 lofi music on YouTube"*.
 
+### Signed release build
+
+The debug APK is all you need for your own TV. To build a signed release APK instead, create
+a key once (keep it and its password safe: updates must be signed with the same key)
+
+```sh
+keytool -genkeypair -v -keystore ~/keystores/tizentube-bridge.jks -alias tizentubebridge \
+  -keyalg RSA -keysize 4096 -validity 36500
+```
+
+then a git-ignored `keystore.properties` in the project root:
+
+```
+storeFile=/absolute/path/to/tizentube-bridge.jks
+keyAlias=tizentubebridge
+storePassword=…
+keyPassword=…
+```
+
+and run `./gradlew assembleRelease` and
+`./setup-tv.sh <TV_IP> app/build/outputs/apk/release/app-release.apk`. A release build can't
+install over a debug build (different signature): uninstall the app first, then re-run
+`setup-tv.sh` and `push-pins.sh`.
+
 ## Pinned phrases
 
 Edit [`pins.txt`](pins.txt), one `phrase: url` per line:
@@ -89,7 +113,7 @@ script pushes that file when it exists.
 ## Logs
 
 ```sh
-adb shell run-as io.github.rnjnkr.tizentubebridge cat files/events.log
+adb shell cat /sdcard/Android/data/io.github.rnjnkr.tizentubebridge/files/events.log
 ```
 
 ## Known limitations

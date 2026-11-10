@@ -79,10 +79,11 @@ case "$(tv settings get secure enabled_accessibility_services)" in
     *) echo "  accessibility service: NOT enabled" ;;
 esac
 sleep 2
-if tv run-as $PKG cat files/events.log 2>/dev/null | grep -q "Service connected"; then
+LOG=/sdcard/Android/data/$PKG/files/events.log
+if tv cat $LOG 2>/dev/null | grep -q "Service connected"; then
     echo "  service: running"
 else
-    echo "  service: not started yet (check again with: $ADB -s $TV shell run-as $PKG cat files/events.log)"
+    echo "  service: not started yet (check again with: $ADB -s $TV shell cat $LOG)"
 fi
 echo
 echo 'Done. Try "Hey Google, play lofi music on YouTube".'

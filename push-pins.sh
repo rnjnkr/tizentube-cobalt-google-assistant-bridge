@@ -21,4 +21,4 @@ echo "Pushing $SRC"
 $ADB connect $TV >/dev/null
 $ADB -s $TV push $SRC $DEST
 echo "Pushed. Recent pin log lines:"
-$ADB -s $TV shell run-as io.github.rnjnkr.tizentubebridge cat files/events.log | grep -E "pins\.txt|pin\(s\)" | tail -3 | cut -f2-
+$ADB -s $TV shell cat ${DEST%/*}/events.log | grep -E "pins\.txt|pin\(s\)" | tail -3 | cut -f2-
