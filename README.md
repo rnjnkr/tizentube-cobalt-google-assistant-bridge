@@ -1,5 +1,7 @@
 # TizenTube Cobalt Google Assistant Bridge (no root)
 
+[![Tests](https://github.com/rnjnkr/tizentube-cobalt-google-assistant-bridge/actions/workflows/tests.yml/badge.svg)](https://github.com/rnjnkr/tizentube-cobalt-google-assistant-bridge/actions/workflows/tests.yml)
+
 **No root. No fake YouTube app. Official YouTube stays installed and untouched.**
 
 Say *"Hey Google, play … on YouTube"* on an Android / Google TV and have it play in
@@ -123,7 +125,7 @@ install over a debug build (different signature): uninstall the app first, then 
 ./gradlew test
 ```
 
-runs unit tests for the parts that don't need a TV: reading the Assistant's link out of
+(also run by GitHub Actions on every push) runs unit tests for the parts that don't need a TV: reading the Assistant's link out of
 `dumpsys` (using intents captured from a real TV, including search commands whose URLs carry
 raw JSON), the overlay title, and `pins.txt` parsing. Timing, the overlay and audio focus
 still need a real TV and a voice command; check the event log.

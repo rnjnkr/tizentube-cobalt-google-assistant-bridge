@@ -1,0 +1,40 @@
+# Runs the unit tests (./gradlew test) on every push to main and on pull requests.
+# Free for public repositories on GitHub-hosted runners.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # gradle-wrapper.jar is a binary: check it is an official Gradle release before running it.
+      - uses: gradle/actions/wrapper-validation@v4
+
+      # Gradle 8.7 needs JDK 17-21. The runner image already has the Android SDK.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew test --console=plain
+
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: app/build/reports/tests/
+          retention-days: 7
