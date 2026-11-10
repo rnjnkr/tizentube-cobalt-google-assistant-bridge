@@ -9,7 +9,10 @@ paste into an AI coding agent (e.g. Claude Code) running in this folder on a com
 
 Context: This project is a Google TV AccessibilityService that redirects Google
 Assistant deep-link launches of official YouTube (com.google.android.youtube.tv) to
-TizenTube Cobalt (io.gh.reisxd.tizentube.cobalt / dev.cobalt.app.MainActivity). It was
+TizenTube Cobalt (io.gh.reisxd.tizentube.cobalt / dev.cobalt.app.MainActivity). It needs no
+root and leaves official YouTube installed, enabled and unmodified: no stand-in app taking
+over YouTube's package name, no system changes (see "Don't disable official YouTube" below
+for why YouTube must stay). It was
 developed on a Sony BRAVIA (platform BRAVIA BF1, MediaTek MT9687) on Android 12 / SDK 31.
 The Gradle project is in this folder — service code, manifest with READ_LOGS/DUMP/
 PACKAGE_USAGE_STATS, accessibility config, and a Gradle 8.7 wrapper (AGP 8.6.1,

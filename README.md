@@ -1,5 +1,7 @@
 # TizenTube Cobalt Google Assistant Bridge (no root)
 
+**No root. No fake YouTube app. Official YouTube stays installed and untouched.**
+
 Say *"Hey Google, play … on YouTube"* on an Android / Google TV and have it play in
 [TizenTube Cobalt](https://github.com/reisxd/TizenTubeCobalt) instead of the official YouTube app.
 
@@ -7,6 +9,24 @@ Google Assistant can only open the official YouTube app. This small accessibilit
 notices the Assistant's YouTube launch, reads the video or playlist link it asked for, and
 re-opens that link in TizenTube, without root, hiding the hand-over behind a TizenTube-styled
 "Opening in TizenTube" card.
+
+## Why this approach
+
+The usual ways to make the Assistant open a YouTube alternative are to root the TV, or to
+uninstall or disable the official YouTube app and install a look-alike that takes over its
+package name. This bridge does neither:
+
+| | Usual approaches | This bridge |
+|---|---|---|
+| Root | often required | **not needed** |
+| Official YouTube | removed or disabled, replaced by a stand-in app | **stays installed, enabled and unmodified** |
+| YouTube updates | the stand-in has to be maintained instead | **keep coming from the Play Store as normal** |
+| Opening YouTube yourself | gone, or only through the stand-in | **works as before, from the remote** |
+| System or Assistant changes | system files or packages altered | **none: a normal app with permissions granted once over adb** |
+| Undoing it | restore YouTube, remove the replacement | **uninstall this app** (and optionally revert one `appops` setting) |
+
+It simply waits for the Assistant to launch YouTube and hands the link over to TizenTube,
+so the Assistant, YouTube and TizenTube all stay exactly as their makers ship them.
 
 ## Features
 
