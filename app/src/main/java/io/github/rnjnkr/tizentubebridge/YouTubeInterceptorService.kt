@@ -47,7 +47,7 @@ import java.util.regex.Pattern
 class YouTubeInterceptorService : AccessibilityService() {
 
     companion object {
-        private const val OFFICIAL_YT = "com.google.android.youtube.tv"
+        private const val OFFICIAL_YT = LaunchParsing.OFFICIAL_YT
         private const val TIZEN_PKG = "io.gh.reisxd.tizentube.cobalt"
         private const val TIZEN_ACTIVITY = "dev.cobalt.app.MainActivity"
 
@@ -56,35 +56,6 @@ class YouTubeInterceptorService : AccessibilityService() {
 
         /** Stands in for a URL when TizenTube should just be opened (no link to hand over). */
         private const val TIZEN_HOME = "tizentube:home"
-
-        /** A START line in ActivityTaskManager that references the official YouTube component. */
-        private val START_LINE: Pattern = Pattern.compile(
-            "START u0 .*(?:pkg|cmp)=" + Pattern.quote(OFFICIAL_YT)
-        )
-
-        /** A one-line dumpsys Intent that targets official YouTube. */
-        private val YT_TARGET: Pattern = Pattern.compile("\\b(?:pkg|cmp)=" + Pattern.quote(OFFICIAL_YT))
-
-        /**
-         * The data URL of a one-line dumpsys Intent (group 1). It runs up to the next Intent
-         * field, because the Assistant's search URLs carry raw JSON, braces and spaces included:
-         * `https://www.youtube.com/tv?voice={"youtubeAssistantRequest":{"query":"search for …"}}&…`
-         */
-        private val DAT_URL: Pattern = Pattern.compile(
-            "\\bdat=(https?://.+?)(?: (?:typ|flg|pkg|cmp)=| \\(has | \\}\\s*$)"
-        )
-
-        /** Flags, component and caller uid of a START line, used to pick its intent out of dumpsys. */
-        private val START_FLG: Pattern = Pattern.compile("\\bflg=(0x[0-9a-fA-F]+)")
-        private val START_CMP: Pattern = Pattern.compile("\\bcmp=([^\\s}]+)")
-        private val START_UID: Pattern = Pattern.compile("\\bfrom uid (\\d+)")
-
-        /** The data URL of a one-line dumpsys Intent that targets official YouTube, or null. */
-        private fun youTubeIntentUrl(line: String): String? {
-            if (!YT_TARGET.matcher(line).find()) return null
-            val m = DAT_URL.matcher(line)
-            return if (m.find()) m.group(1) else null
-        }
 
         /** START lines within this window of a launch are treated as that launch's own hops. */
         private const val DEBOUNCE_MS = 5000L
@@ -115,21 +86,6 @@ class YouTubeInterceptorService : AccessibilityService() {
         private val RESUMED_ACTIVITY: Pattern =
             Pattern.compile("mResumedActivity: ActivityRecord\\{\\S+ u\\d+ (\\S+)")
 
-        /**
-         * What the user asked for, for the overlay: "play lofi hip hop on YouTube" ->
-         * "lofi hip hop", "search for Minecraft videos" -> "Minecraft videos".
-         */
-        private fun spokenTitle(url: String): String? {
-            val vq = try {
-                Uri.parse(url).getQueryParameter("vq")
-            } catch (e: Exception) {
-                null
-            } ?: return null
-            return vq.trim().replace(Regex("\\s+"), " ")
-                .replace(Regex("^(?:play|search(?:\\s+for)?)\\s+", RegexOption.IGNORE_CASE), "")
-                .replace(Regex("\\s+on youtube$", RegexOption.IGNORE_CASE), "")
-                .takeIf { it.isNotBlank() }
-        }
     }
 
     @Volatile private var running = false
@@ -210,7 +166,7 @@ class YouTubeInterceptorService : AccessibilityService() {
                         while (running) {
                             line = reader.readLine() ?: break
                             val l = line ?: continue
-                            if (START_LINE.matcher(l).find()) {
+                            if (LaunchParsing.isYouTubeStart(l)) {
                                 EventLog.i("Detected YouTube launch: $l")
                                 handleLaunchDetected(l)
                             }
@@ -252,8 +208,7 @@ class YouTubeInterceptorService : AccessibilityService() {
         // Only deep links (a dat= URL: "play …", "search for …") get redirected; "open YouTube"
         // and opening it from the launcher carry no link and are left alone.
         val isDeepLink = startLine.contains(" dat=")
-        val fromAssistant = START_UID.matcher(startLine)
-            .let { it.find() && it.group(1).toInt() == assistantUid }
+        val fromAssistant = LaunchParsing.startUid(startLine).let { it != null && it == assistantUid }
         mainHandler.post { beginLaunch(id, viaShell, isDeepLink) }
 
         // dumpsys takes 200-400 ms on this TV. Run it off the watcher thread so the hop's START
@@ -270,7 +225,7 @@ class YouTubeInterceptorService : AccessibilityService() {
                 }
                 else -> null
             }
-            val title = raw?.let { spokenTitle(it) }
+            val title = raw?.let { LaunchParsing.spokenTitle(it) }
             mainHandler.post { onUrlResolved(id, url, title) }
         }, "yt-url-lookup").start()
     }
@@ -348,22 +303,16 @@ class YouTubeInterceptorService : AccessibilityService() {
             // 1. The activity starter's most recent start keeps its full intent even after the
             //    ShellActivity trampoline finishes. At detection time that is this launch (or its
             //    own trampoline hop); only trusted if it targeted official YouTube.
-            val starter = dumpsys("starter")
-            val intentLine = starter.substringAfter("mStartActivity:", "")
-                .lineSequence().firstOrNull { it.trimStart().startsWith("Intent {") }
-            intentLine?.let { youTubeIntentUrl(it) }?.let { if (!it.endsWith("/...")) return it }
+            LaunchParsing.starterUrl(dumpsys("starter"))?.let { return it }
 
             // 2. The launched activity's own record, while it is still alive. dumpsys may add
             //    flags of its own, so this only matches when they happen to be unchanged.
-            val wantFlg = START_FLG.matcher(startLine).let { if (it.find()) it.group(1) else null }
-            val wantCmp = START_CMP.matcher(startLine).let { if (it.find()) it.group(1) else null }
+            val wantFlg = LaunchParsing.startFlags(startLine)
+            val wantCmp = LaunchParsing.startComponent(startLine)
             if (wantFlg != null && wantCmp != null) {
-                for (line in dumpsys("activities").lineSequence()) {
-                    if (!line.trimStart().startsWith("Intent {")) continue
-                    if (!line.contains("cmp=$wantCmp") || !line.contains("flg=$wantFlg ")) continue
-                    val url = youTubeIntentUrl(line) ?: continue
+                LaunchParsing.activityRecordUrl(dumpsys("activities"), wantFlg, wantCmp)?.let {
                     EventLog.i("Starter record unusable; using matching activity record")
-                    return url
+                    return it
                 }
             }
 
@@ -377,11 +326,7 @@ class YouTubeInterceptorService : AccessibilityService() {
 
     /** Swaps in a pinned URL when the Assistant's heard query (`vq`) is listed in pins.txt. */
     private fun applyPin(url: String): String {
-        val vq = try {
-            Uri.parse(url).getQueryParameter("vq")
-        } catch (e: Exception) {
-            null
-        } ?: return url
+        val vq = LaunchParsing.queryParameter(url, "vq") ?: return url
         val pinned = pins.lookup(vq) ?: return url
         EventLog.i("Pinned query \"$vq\" -> $pinned (Assistant sent $url)")
         return pinned

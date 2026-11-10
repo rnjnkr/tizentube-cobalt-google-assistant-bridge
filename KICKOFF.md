@@ -28,6 +28,8 @@ Please, running locally:
    releases bundle Java 25, which fails with just "25.0.3"; point Gradle at a JDK 17–21:
    -Dorg.gradle.java.home=<path to JDK 21>).
    The SDK needs platforms;android-34 and build-tools;34.0.0.
+   `./gradlew test` runs the unit tests (LaunchParsing.kt: START lines, dumpsys parsing,
+   URLs; PinStore: pins.txt). They need no TV.
 2.-4. `./setup-tv.sh <TV_IP>` does steps 2-4 (plus the notification-listener and audio-focus
    steps below) and checks the result. By hand:
 2. adb connect to the TV, install -r the debug APK.

@@ -1,7 +1,6 @@
 package io.github.rnjnkr.tizentubebridge
 
 import android.content.Context
-import android.net.Uri
 import java.io.File
 import java.util.Locale
 
@@ -22,7 +21,7 @@ class PinStore(private val context: Context) {
     companion object {
         const val FILE_NAME = "pins.txt"
 
-        private val DEFAULTS = """
+        internal val DEFAULTS = """
             |# Voice phrase -> URL that TizenTube should open instead of the Assistant's pick.
             |# One "phrase: url" per line, split at the first colon. Case-insensitive; a leading
             |# "play" and trailing "on YouTube" are ignored. Blank lines and # comments are skipped.
@@ -39,19 +38,44 @@ class PinStore(private val context: Context) {
             phrase.lowercase(Locale.ROOT).trim().replace(Regex("\\s+"), " ")
                 .removePrefix("play ").removeSuffix(" on youtube").trim()
 
-        private fun isYouTubeUrl(url: String): Boolean {
-            val uri = try {
-                Uri.parse(url)
-            } catch (e: Exception) {
-                return false
+        /** Scheme and host of an http(s) URL (skipping any user info and port). */
+        private val HTTP_HOST = Regex("^(https?)://(?:[^/?#@]*@)?([^/?#:]+)", RegexOption.IGNORE_CASE)
+
+        fun isYouTubeUrl(url: String): Boolean {
+            val host = HTTP_HOST.find(url)?.groupValues?.get(2)?.lowercase(Locale.ROOT) ?: return false
+            return host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be"
+        }
+
+        /** Pins in file order (a phrase listed twice keeps the later URL), plus one message per problem line. */
+        class Parsed(val pins: Map<String, String>, val issues: List<String>)
+
+        fun parse(text: String): Parsed {
+            val result = LinkedHashMap<String, String>()
+            val issues = mutableListOf<String>()
+            text.lineSequence().forEachIndexed { index, raw ->
+                val line = raw.trim()
+                if (line.isEmpty() || line.startsWith("#")) return@forEachIndexed
+                val colon = line.indexOf(':')
+                val phrase = if (colon > 0) normalize(line.substring(0, colon)) else ""
+                val url = if (colon > 0) line.substring(colon + 1).trim() else ""
+                when {
+                    phrase.isEmpty() || url.isEmpty() ->
+                        issues += "$FILE_NAME line ${index + 1} ignored: expected \"phrase: url\""
+                    !isYouTubeUrl(url) ->
+                        issues += "$FILE_NAME line ${index + 1} ignored: not a YouTube URL: $url"
+                    else -> {
+                        if (phrase in result) {
+                            issues += "$FILE_NAME line ${index + 1}: \"$phrase\" listed again; using this one"
+                        }
+                        result[phrase] = url
+                    }
+                }
             }
-            val host = uri.host?.lowercase(Locale.ROOT) ?: return false
-            return (uri.scheme == "https" || uri.scheme == "http") &&
-                (host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be")
+            return Parsed(result, issues)
         }
     }
 
-    private var pins: Map<String, String> = parse(DEFAULTS, logIssues = false)
+    private var pins: Map<String, String> = parse(DEFAULTS).pins
     private var loadedStamp: Pair<Long, Long>? = null
 
     /** The pinned URL for a heard query, or null. Called from lookup threads. */
@@ -74,35 +98,13 @@ class PinStore(private val context: Context) {
             }
             val stamp = file.lastModified() to file.length()
             if (stamp == loadedStamp) return
-            pins = parse(file.readText(), logIssues = true)
+            val parsed = parse(file.readText())
+            parsed.issues.forEach { EventLog.w(it) }
+            pins = parsed.pins
             loadedStamp = stamp
             EventLog.i("Loaded ${pins.size} pin(s) from $FILE_NAME")
         } catch (e: Exception) {
             EventLog.e("Could not read $FILE_NAME; keeping ${pins.size} current pin(s)", e)
         }
-    }
-
-    private fun parse(text: String, logIssues: Boolean): Map<String, String> {
-        val result = LinkedHashMap<String, String>()
-        text.lineSequence().forEachIndexed { index, raw ->
-            val line = raw.trim()
-            if (line.isEmpty() || line.startsWith("#")) return@forEachIndexed
-            val colon = line.indexOf(':')
-            val phrase = if (colon > 0) normalize(line.substring(0, colon)) else ""
-            val url = if (colon > 0) line.substring(colon + 1).trim() else ""
-            when {
-                phrase.isEmpty() || url.isEmpty() ->
-                    if (logIssues) EventLog.w("$FILE_NAME line ${index + 1} ignored: expected \"phrase: url\"")
-                !isYouTubeUrl(url) ->
-                    if (logIssues) EventLog.w("$FILE_NAME line ${index + 1} ignored: not a YouTube URL: $url")
-                else -> {
-                    if (logIssues && phrase in result) {
-                        EventLog.w("$FILE_NAME line ${index + 1}: \"$phrase\" listed again; using this one")
-                    }
-                    result[phrase] = url
-                }
-            }
-        }
-        return result
     }
 }

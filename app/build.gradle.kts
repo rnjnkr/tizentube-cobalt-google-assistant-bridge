@@ -57,4 +57,7 @@ android {
 
 dependencies {
     // No AndroidX needed; the service uses only framework + Kotlin stdlib.
+
+    // Plain JVM unit tests for the parsing code (./gradlew test); not part of the APK.
+    testImplementation("junit:junit:4.13.2")
 }

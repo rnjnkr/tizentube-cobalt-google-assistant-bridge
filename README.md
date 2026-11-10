@@ -117,6 +117,17 @@ and run `./gradlew assembleRelease` and
 install over a debug build (different signature): uninstall the app first, then re-run
 `setup-tv.sh` and `push-pins.sh`.
 
+### Tests
+
+```sh
+./gradlew test
+```
+
+runs unit tests for the parts that don't need a TV: reading the Assistant's link out of
+`dumpsys` (using intents captured from a real TV, including search commands whose URLs carry
+raw JSON), the overlay title, and `pins.txt` parsing. Timing, the overlay and audio focus
+still need a real TV and a voice command; check the event log.
+
 ## Pinned phrases
 
 Edit [`pins.txt`](pins.txt), one `phrase: url` per line:
